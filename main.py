@@ -241,7 +241,7 @@ if __name__ == '__main__':
     print('#####################################################')
     print('Generating data ...')
     print('#####################################################\n\n')
-    generate_samples(target_lstm, args.batch_size, args.n_samples, POSITIVE_FILE, args)
+    generate_samples(target_lstm, args.batch_size, args.n_samples, POSITIVE_FILE)
 
     # Pre-train generator using MLE
     print('#####################################################')
