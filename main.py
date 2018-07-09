@@ -100,7 +100,8 @@ def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epoch
             loss.backward()
             optimizer.step()
         data_iter.reset()
-        print("Epoch {}, train loss: {}".format(epoch, total_loss))
+        avg_loss = total_loss / len(data_iter)
+        print("Epoch {}, train loss: {:.5f}".format(epoch, avg_loss))
 
 
 def train_generator_PG(gen, dis, rollout, pg_loss, optimizer, epochs, args):
@@ -141,7 +142,8 @@ def eval_generator(model, data_iter, criterion, args):
         pred = model(data)
         loss = criterion(pred, target)
         total_loss += loss.item()
-    return total_loss
+        avg_loss = total_loss / len(data_iter)
+    return avg_loss
 
 
 def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
@@ -166,8 +168,9 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
             loss.backward()
             optimizer.step()
         data_iter.reset()
+        avg_loss = total_loss / len(data_iter)
         acc = float(correct) / data_iter.data_num
-        print("Epoch {}, train loss: {}, train acc: {}".format(epoch, total_loss, acc))
+        print("Epoch {}, train loss: {:.5f}, train acc: {:.3f}".format(epoch, avg_loss, acc))
 
 
 def eval_discriminator(model, data_iter, criterion, args):
@@ -185,8 +188,9 @@ def eval_discriminator(model, data_iter, criterion, args):
         correct += pred.eq(target.data).cpu().sum()
         loss = criterion(output, target)
         total_loss += loss.item()
+    avg_loss = total_loss / len(data_iter)
     acc = float(correct) / data_iter.data_num
-    return total_loss, acc
+    return avg_loss, acc
 
 
 def adversarial_train(gen, dis, rollout, pg_loss, nll_loss, gen_optimizer, dis_optimizer, args):
