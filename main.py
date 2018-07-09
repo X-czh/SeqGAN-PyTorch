@@ -89,7 +89,6 @@ def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epoch
     """
     for epoch in range(epochs):
         total_loss = 0.
-        total_words = 0.
         for data, target in data_iter:
             if args.cuda:
                 data, target = data.cuda(), target.cuda()
@@ -97,13 +96,11 @@ def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epoch
             output = gen(data)
             loss = criterion(output, target)
             total_loss += loss.item()
-            total_words += data.size(0) * data.size(1)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         data_iter.reset()
-        avg_loss = total_loss / total_words
-        print("Epoch {}, train loss: {}".format(epoch, avg_loss))
+        print("Epoch {}, train loss: {}".format(epoch, total_loss))
 
 
 def train_generator_PG(gen, dis, rollout, pg_loss, optimizer, epochs, args):
@@ -136,9 +133,7 @@ def eval_generator(model, data_iter, criterion, args):
     """
     Evaluate generator with NLL
     """
-    model.eval()
     total_loss = 0.
-    total_words = 0.
     for data, target in data_iter:
         if args.cuda:
             data, target = data.cuda(), target.cuda()
@@ -146,9 +141,7 @@ def eval_generator(model, data_iter, criterion, args):
         pred = model(data)
         loss = criterion(pred, target)
         total_loss += loss.item()
-        total_words += data.size(0) * data.size(1)
-    avg_loss = total_loss / total_words
-    return avg_loss
+    return total_loss
 
 
 def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
@@ -160,7 +153,6 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
     for epoch in range(epochs):
         correct = 0
         total_loss = 0.
-        total_words = 0.
         for data, target in data_iter:
             if args.cuda:
                 data, target = data.cuda(), target.cuda()
@@ -170,24 +162,20 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
             correct += pred.eq(target.data).cpu().sum()
             loss = criterion(output, target)
             total_loss += loss.item()
-            total_words += data.size(0) * data.size(1)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         data_iter.reset()
-        avg_loss = total_loss / total_words
         acc = float(correct) / data_iter.data_num
-        print("Epoch {}, train loss: {}, train acc: {}".format(epoch, avg_loss, acc))
+        print("Epoch {}, train loss: {}, train acc: {}".format(epoch, total_loss, acc))
 
 
 def eval_discriminator(model, data_iter, criterion, args):
     """
-    Evaluate discriminator
+    Evaluate discriminator, dropout is enabled
     """
-    model.eval()
     correct = 0
     total_loss = 0.
-    total_words = 0.
     for data, target in data_iter:
         if args.cuda:
             data, target = data.cuda(), target.cuda()
@@ -197,10 +185,8 @@ def eval_discriminator(model, data_iter, criterion, args):
         correct += pred.eq(target.data).cpu().sum()
         loss = criterion(output, target)
         total_loss += loss.item()
-        total_words += data.size(0) * data.size(1)
-    avg_loss = total_loss / total_words
     acc = float(correct) / data_iter.data_num
-    return avg_loss, acc
+    return total_loss, acc
 
 
 def adversarial_train(gen, dis, rollout, pg_loss, nll_loss, gen_optimizer, dis_optimizer, args):
@@ -237,7 +223,7 @@ if __name__ == '__main__':
     generator = Generator(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
     discriminator = Discriminator(d_num_class, args.vocab_size, d_embed_dim, d_filter_sizes, d_num_filters, d_dropout_prob)
     target_lstm = TargetLSTM(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
-    nll_loss = nn.NLLLoss(size_average=False)
+    nll_loss = nn.NLLLoss()
     pg_loss = PGLoss()
     gen_optimizer = optim.Adam(params=generator.parameters(), lr=args.gen_lr)
     dis_optimizer = optim.Adam(params=discriminator.parameters(), lr=args.dis_lr)
@@ -254,14 +240,12 @@ if __name__ == '__main__':
     print('Generating data ...')
     print('#####################################################\n\n')
     generate_samples(target_lstm, args.batch_size, args.n_samples, POSITIVE_FILE, args)
-    
-    # Load data from file
-    gen_data_iter = GenDataIter(POSITIVE_FILE, args.batch_size)
 
     # Pre-train generator using MLE
     print('#####################################################')
     print('Start pre-training generator with MLE...')
     print('#####################################################\n')
+    gen_data_iter = GenDataIter(POSITIVE_FILE, args.batch_size)
     for i in range(args.g_pretrain_steps):
         print("G-Step {}".format(i))
         train_generator_MLE(generator, target_lstm, gen_data_iter, nll_loss, 
