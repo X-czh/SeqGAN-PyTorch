@@ -72,12 +72,12 @@ d_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
 d_dropout_prob = 0.75
 
 
-def generate_samples(model, batch_size, generated_num, output_file, args):
+def generate_samples(model, batch_size, generated_num, output_file):
     samples = []
     for _ in range(int(generated_num / batch_size)):
         sample = model.sample(batch_size, g_seq_len).cpu().data.numpy().tolist()
         samples.extend(sample)
-    with open(args.data_path + output_file, 'w') as fout:
+    with open(output_file, 'w') as fout:
         for sample in samples:
             string = ''.join([str(s) for s in sample])
             fout.write('{}\n'.format(string))
@@ -148,7 +148,7 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
     """
     Train discriminator
     """
-    generate_samples(gen, args.batch_size, args.n_samples, NEGATIVE_FILE, args)
+    generate_samples(gen, args.batch_size, args.n_samples, NEGATIVE_FILE)
     data_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
     for epoch in range(epochs):
         correct = 0
@@ -252,7 +252,7 @@ if __name__ == '__main__':
         print("G-Step {}".format(i))
         train_generator_MLE(generator, target_lstm, gen_data_iter, nll_loss, 
             gen_optimizer, args.gk_epochs, args)
-        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE, args)
+        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         eval_iter = GenDataIter(NEGATIVE_FILE, args.batch_size)
         gen_loss = eval_generator(target_lstm, eval_iter, nll_loss, args)
         print("eval loss: {:.5f}\n".format(gen_loss))
@@ -266,7 +266,7 @@ if __name__ == '__main__':
         print("D-Step {}".format(i))
         train_discriminator(discriminator, generator, nll_loss, 
             gen_optimizer, args.dk_epochs, args)
-        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE, args)
+        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         eval_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
         dis_loss, dis_acc = eval_discriminator(discriminator, eval_iter, nll_loss, args)
         print("eval loss: {:.5f}, eval acc: {:.3f}\n".format(dis_loss, dis_acc))
@@ -281,7 +281,7 @@ if __name__ == '__main__':
         print("Round {}".format(i))
         adversarial_train(generator, discriminator, rollout, 
             pg_loss, nll_loss, gen_optimizer, dis_optimizer, args)
-        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE, args)
+        generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         gen_eval_iter = GenDataIter(NEGATIVE_FILE, args.batch_size)
         dis_eval_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
         gen_loss = eval_generator(target_lstm, gen_eval_iter, nll_loss, args)
