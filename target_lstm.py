@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class TargetLSTM(nn.Module):
-    """Target LSTM """
+    """ Target LSTM """
 
     def __init__(self,  vocab_size, embedding_dim, hidden_dim, use_cuda):
         super(TargetLSTM, self).__init__()

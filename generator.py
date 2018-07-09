@@ -78,8 +78,8 @@ class Generator(nn.Module):
             for _ in range(seq_len):
                 out, h, c = self.step(x, h, c)
                 prob = torch.exp(out)
-                sample = torch.multinomial(prob, 1)
-                samples.append(sample)
+                x = torch.multinomial(prob, 1)
+                samples.append(x)
         else:
             given_len = x.size(1)
             lis = x.chunk(x.size(1), dim=1)
