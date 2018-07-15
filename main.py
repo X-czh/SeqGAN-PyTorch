@@ -100,8 +100,8 @@ def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epoch
             loss.backward()
             optimizer.step()
         data_iter.reset()
-        avg_loss = total_loss / len(data_iter)
-        print("Epoch {}, train loss: {:.5f}".format(epoch, avg_loss))
+    avg_loss = total_loss / len(data_iter)
+    print("Epoch {}, train loss: {:.5f}".format(epoch, avg_loss))
 
 
 def train_generator_PG(gen, dis, rollout, pg_loss, optimizer, epochs, args):
@@ -142,7 +142,7 @@ def eval_generator(model, data_iter, criterion, args):
         pred = model(data)
         loss = criterion(pred, target)
         total_loss += loss.item()
-        avg_loss = total_loss / len(data_iter)
+    avg_loss = total_loss / len(data_iter)
     return avg_loss
 
 
