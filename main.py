@@ -169,7 +169,7 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
             optimizer.step()
         data_iter.reset()
         avg_loss = total_loss / len(data_iter)
-        acc = float(correct) / data_iter.data_num
+        acc = correct.item() / data_iter.data_num
         print("Epoch {}, train loss: {:.5f}, train acc: {:.3f}".format(epoch, avg_loss, acc))
 
 
@@ -189,7 +189,7 @@ def eval_discriminator(model, data_iter, criterion, args):
         loss = criterion(output, target)
         total_loss += loss.item()
     avg_loss = total_loss / len(data_iter)
-    acc = float(correct) / data_iter.data_num
+    acc = correct.item() / data_iter.data_num
     return avg_loss, acc
 
 
