@@ -12,7 +12,7 @@ class GenDataIter:
         self.data_lis = self.read_file(data_file)
         self.data_num = len(self.data_lis)
         self.indices = range(self.data_num)
-        self.num_batches = int(math.ceil(float(self.data_num)/self.batch_size))
+        self.num_batches = math.ceil(self.data_num / self.batch_size)
         self.idx = 0
 
     def __len__(self):
@@ -36,8 +36,8 @@ class GenDataIter:
         d = torch.tensor(d)
 
         # 0 is prepended to d as start symbol
-        data = torch.cat([torch.zeros(self.batch_size, 1, dtype=torch.int64), d], dim=1)
-        target = torch.cat([d, torch.zeros(self.batch_size, 1, dtype=torch.int64)], dim=1)
+        data = torch.cat([torch.zeros(len(index), 1, dtype=torch.int64), d], dim=1)
+        target = torch.cat([d, torch.zeros(len(index), 1, dtype=torch.int64)], dim=1)
         
         self.idx += self.batch_size
         return data, target
@@ -66,7 +66,7 @@ class DisDataIter:
         self.pairs = list(zip(self.data, self.labels))
         self.data_num = len(self.pairs)
         self.indices = range(self.data_num)
-        self.num_batches = int(math.ceil(float(self.data_num)/self.batch_size))
+        self.num_batches = math.ceil(self.data_num / self.batch_size)
         self.idx = 0
 
     def __len__(self):

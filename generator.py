@@ -70,8 +70,8 @@ class Generator(nn.Module):
             - out: (batch_size * seq_len)
         """
         samples = []
-        h, c = self.init_hidden(batch_size)
         if x is None:
+            h, c = self.init_hidden(batch_size)
             x = torch.zeros(batch_size, 1, dtype=torch.int64)
             if self.use_cuda:
                 x = x.cuda()
@@ -81,6 +81,7 @@ class Generator(nn.Module):
                 x = torch.multinomial(prob, 1)
                 samples.append(x)
         else:
+            h, c = self.init_hidden(x.size(0))
             given_len = x.size(1)
             lis = x.chunk(x.size(1), dim=1)
             for i in range(given_len):
