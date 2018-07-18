@@ -1,4 +1,5 @@
 import argparse
+import pickle as pkl
 
 import torch
 import torch.nn as nn
@@ -19,16 +20,16 @@ parser.add_argument('--hpc', action='store_true', default=False,
                     help='set to hpc mode')
 parser.add_argument('--data_path', type=str, default='/scratch/zc807/seq_gan/', metavar='PATH',
                     help='data path to save files (default: /scratch/zc807/seq_gan/)')
-parser.add_argument('--rounds', type=int, default=200, metavar='N',
-                    help='rounds of adversarial training (default: 200)')
-parser.add_argument('--g_pretrain_steps', type=int, default=120, metavar='N',
-                    help='steps of pre-training of generators (default: 120)')
+parser.add_argument('--rounds', type=int, default=150, metavar='N',
+                    help='rounds of adversarial training (default: 150)')
+parser.add_argument('--g_pretrain_steps', type=int, default=100, metavar='N',
+                    help='steps of pre-training of generators (default: 100)')
 parser.add_argument('--d_pretrain_steps', type=int, default=50, metavar='N',
                     help='steps of pre-training of discriminators (default: 50)')
 parser.add_argument('--g_steps', type=int, default=1, metavar='N',
                     help='steps of generator updates in one round of adverarial training (default: 1)')
-parser.add_argument('--d_steps', type=int, default=5, metavar='N',
-                    help='steps of discriminator updates in one round of adverarial training (default: 5)')
+parser.add_argument('--d_steps', type=int, default=3, metavar='N',
+                    help='steps of discriminator updates in one round of adverarial training (default: 3)')
 parser.add_argument('--gk_epochs', type=int, default=1, metavar='N',
                     help='epochs of generator updates in one step of generate update (default: 1)')
 parser.add_argument('--dk_epochs', type=int, default=3, metavar='N',
@@ -69,7 +70,7 @@ d_num_class = 2
 d_embed_dim = 64
 d_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
 d_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
-d_dropout_prob = 0.75
+d_dropout_prob = 0.2
 
 
 def generate_samples(model, batch_size, generated_num, output_file):
@@ -83,7 +84,8 @@ def generate_samples(model, batch_size, generated_num, output_file):
             fout.write('{}\n'.format(string))
 
 
-def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epochs, args):
+def train_generator_MLE(gen, data_iter, criterion, optimizer, epochs, 
+        gen_pretrain_train_loss, args):
     """
     Train generator with MLE
     """
@@ -102,6 +104,7 @@ def train_generator_MLE(gen, target_lstm, data_iter, criterion, optimizer, epoch
         data_iter.reset()
     avg_loss = total_loss / len(data_iter)
     print("Epoch {}, train loss: {:.5f}".format(epoch, avg_loss))
+    gen_pretrain_train_loss.append(avg_loss)
 
 
 def train_generator_PG(gen, dis, rollout, pg_loss, optimizer, epochs, args):
@@ -146,7 +149,8 @@ def eval_generator(model, data_iter, criterion, args):
     return avg_loss
 
 
-def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
+def train_discriminator(dis, gen, criterion, optimizer, epochs, 
+        dis_adversarial_train_loss, dis_adversarial_train_acc, args):
     """
     Train discriminator
     """
@@ -171,6 +175,8 @@ def train_discriminator(dis, gen, criterion, optimizer, epochs, args):
         avg_loss = total_loss / len(data_iter)
         acc = correct.item() / data_iter.data_num
         print("Epoch {}, train loss: {:.5f}, train acc: {:.3f}".format(epoch, avg_loss, acc))
+        dis_adversarial_train_loss.append(avg_loss)
+        dis_adversarial_train_acc.append(acc)
 
 
 def eval_discriminator(model, data_iter, criterion, args):
@@ -193,7 +199,8 @@ def eval_discriminator(model, data_iter, criterion, args):
     return avg_loss, acc
 
 
-def adversarial_train(gen, dis, rollout, pg_loss, nll_loss, gen_optimizer, dis_optimizer, args):
+def adversarial_train(gen, dis, rollout, pg_loss, nll_loss, gen_optimizer, dis_optimizer, 
+        dis_adversarial_train_loss, dis_adversarial_train_acc, args):
     """
     Adversarially train generator and discriminator
     """
@@ -207,7 +214,8 @@ def adversarial_train(gen, dis, rollout, pg_loss, nll_loss, gen_optimizer, dis_o
     print("#Train discriminator")
     for i in range(args.d_steps):
         print("##D-Step {}".format(i))
-        train_discriminator(dis, gen, nll_loss, dis_optimizer, args.dk_epochs, args)
+        train_discriminator(dis, gen, nll_loss, dis_optimizer, args.dk_epochs, 
+            dis_adversarial_train_loss, dis_adversarial_train_acc, args)
 
     # update roll-out model
     rollout.update_params()
@@ -232,7 +240,7 @@ if __name__ == '__main__':
     nll_loss = nn.NLLLoss()
     pg_loss = PGLoss()
     gen_optimizer = optim.Adam(params=generator.parameters(), lr=args.gen_lr)
-    dis_optimizer = optim.Adam(params=discriminator.parameters(), lr=args.dis_lr)
+    dis_optimizer = optim.SGD(params=discriminator.parameters(), lr=args.dis_lr)
     if args.cuda:
         generator = generator.cuda()
         discriminator = discriminator.cuda()
@@ -240,6 +248,19 @@ if __name__ == '__main__':
         nll_loss = nll_loss.cuda()
         pg_loss = pg_loss.cuda()
         cudnn.benchmark = True
+
+    # Container of experiment data
+    gen_pretrain_train_loss = []
+    gen_pretrain_eval_loss = []
+    dis_pretrain_train_loss = []
+    dis_pretrain_train_acc = []
+    dis_pretrain_eval_loss = []
+    dis_pretrain_eval_acc = []
+    gen_adversarial_eval_loss = []
+    dis_adversarial_train_loss = []
+    dis_adversarial_train_acc = []
+    dis_adversarial_eval_loss = []
+    dis_adversarial_eval_acc = []
 
     # Generate toy data using target LSTM
     print('#####################################################')
@@ -254,11 +275,12 @@ if __name__ == '__main__':
     gen_data_iter = GenDataIter(POSITIVE_FILE, args.batch_size)
     for i in range(args.g_pretrain_steps):
         print("G-Step {}".format(i))
-        train_generator_MLE(generator, target_lstm, gen_data_iter, nll_loss, 
-            gen_optimizer, args.gk_epochs, args)
+        train_generator_MLE(generator, gen_data_iter, nll_loss, 
+            gen_optimizer, args.gk_epochs, gen_pretrain_train_loss, args)
         generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         eval_iter = GenDataIter(NEGATIVE_FILE, args.batch_size)
         gen_loss = eval_generator(target_lstm, eval_iter, nll_loss, args)
+        gen_pretrain_eval_loss.append(gen_loss)
         print("eval loss: {:.5f}\n".format(gen_loss))
     print('#####################################################\n\n')
 
@@ -269,10 +291,12 @@ if __name__ == '__main__':
     for i in range(args.d_pretrain_steps):
         print("D-Step {}".format(i))
         train_discriminator(discriminator, generator, nll_loss, 
-            gen_optimizer, args.dk_epochs, args)
+            gen_optimizer, args.dk_epochs, dis_adversarial_train_loss, dis_adversarial_train_acc, args)
         generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         eval_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
         dis_loss, dis_acc = eval_discriminator(discriminator, eval_iter, nll_loss, args)
+        dis_pretrain_eval_loss.append(dis_loss)
+        dis_pretrain_eval_acc.append(dis_acc)
         print("eval loss: {:.5f}, eval acc: {:.3f}\n".format(dis_loss, dis_acc))
     print('#####################################################\n\n')
 
@@ -284,11 +308,33 @@ if __name__ == '__main__':
     for i in range(args.rounds):
         print("Round {}".format(i))
         adversarial_train(generator, discriminator, rollout, 
-            pg_loss, nll_loss, gen_optimizer, dis_optimizer, args)
+            pg_loss, nll_loss, gen_optimizer, dis_optimizer, 
+            dis_adversarial_train_loss, dis_adversarial_train_acc, args)
         generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         gen_eval_iter = GenDataIter(NEGATIVE_FILE, args.batch_size)
         dis_eval_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
         gen_loss = eval_generator(target_lstm, gen_eval_iter, nll_loss, args)
+        gen_adversarial_eval_loss.append(gen_loss)
         dis_loss, dis_acc = eval_discriminator(discriminator, dis_eval_iter, nll_loss, args)
+        dis_adversarial_eval_loss.append(dis_loss)
+        dis_adversarial_eval_acc.append(dis_acc)
         print("gen eval loss: {:.5f}, dis eval loss: {:.5f}, dis eval acc: {:.3f}\n"
             .format(gen_loss, dis_loss, dis_acc))
+
+    # Save experiment data
+    with open(args.data_path + 'experiment.pkl', 'wb') as f:
+        pkl.dump(
+            (gen_pretrain_train_loss,
+                gen_pretrain_eval_loss,
+                dis_pretrain_train_loss,
+                dis_pretrain_train_acc,
+                dis_pretrain_eval_loss,
+                dis_pretrain_eval_acc,
+                gen_adversarial_eval_loss,
+                dis_adversarial_train_loss,
+                dis_adversarial_train_acc,
+                dis_adversarial_eval_loss,
+                dis_adversarial_eval_acc),
+            f,
+            protocol=pkl.HIGHEST_PROTOCOL
+        )

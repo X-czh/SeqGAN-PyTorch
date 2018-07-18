@@ -51,7 +51,6 @@ class TargetLSTM(nn.Module):
         out = self.log_softmax(self.fc(out.contiguous().view(-1, self.hidden_dim))) # batch_size * vocab_size
         return out, h, c
 
-
     def init_hidden(self, batch_size):
         h = torch.zeros((1, batch_size, self.hidden_dim))
         c = torch.zeros((1, batch_size, self.hidden_dim))
