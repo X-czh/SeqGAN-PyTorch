@@ -20,10 +20,10 @@ parser.add_argument('--hpc', action='store_true', default=False,
                     help='set to hpc mode')
 parser.add_argument('--data_path', type=str, default='/scratch/zc807/seq_gan/', metavar='PATH',
                     help='data path to save files (default: /scratch/zc807/seq_gan/)')
-parser.add_argument('--rounds', type=int, default=150, metavar='N',
+parser.add_argument('--rounds', type=int, default=200, metavar='N',
                     help='rounds of adversarial training (default: 150)')
-parser.add_argument('--g_pretrain_steps', type=int, default=100, metavar='N',
-                    help='steps of pre-training of generators (default: 100)')
+parser.add_argument('--g_pretrain_steps', type=int, default=120, metavar='N',
+                    help='steps of pre-training of generators (default: 120)')
 parser.add_argument('--d_pretrain_steps', type=int, default=50, metavar='N',
                     help='steps of pre-training of discriminators (default: 50)')
 parser.add_argument('--g_steps', type=int, default=1, metavar='N',
@@ -237,7 +237,7 @@ if __name__ == '__main__':
     generator = Generator(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
     discriminator = Discriminator(d_num_class, args.vocab_size, d_embed_dim, d_filter_sizes, d_num_filters, d_dropout_prob)
     target_lstm = TargetLSTM(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
-    nll_loss = nn.NLLLoss()
+    nll_loss = nn.CrossEntropyLoss()
     pg_loss = PGLoss()
     gen_optimizer = optim.Adam(params=generator.parameters(), lr=args.gen_lr)
     dis_optimizer = optim.SGD(params=discriminator.parameters(), lr=args.dis_lr)
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     for i in range(args.d_pretrain_steps):
         print("D-Step {}".format(i))
         train_discriminator(discriminator, generator, nll_loss, 
-            gen_optimizer, args.dk_epochs, dis_adversarial_train_loss, dis_adversarial_train_acc, args)
+            dis_optimizer, args.dk_epochs, dis_adversarial_train_loss, dis_adversarial_train_acc, args)
         generate_samples(generator, args.batch_size, args.n_samples, NEGATIVE_FILE)
         eval_iter = DisDataIter(POSITIVE_FILE, NEGATIVE_FILE, args.batch_size)
         dis_loss, dis_acc = eval_discriminator(discriminator, eval_iter, nll_loss, args)

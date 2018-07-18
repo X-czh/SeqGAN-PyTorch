@@ -14,6 +14,7 @@ class GenDataIter:
         self.indices = range(self.data_num)
         self.num_batches = math.ceil(self.data_num / self.batch_size)
         self.idx = 0
+        self.reset()
 
     def __len__(self):
         return self.num_batches
@@ -68,6 +69,7 @@ class DisDataIter:
         self.indices = range(self.data_num)
         self.num_batches = math.ceil(self.data_num / self.batch_size)
         self.idx = 0
+        self.reset()
 
     def __len__(self):
         return self.num_batches
@@ -89,6 +91,7 @@ class DisDataIter:
         pairs = [self.pairs[i] for i in index]
         data = [p[0] for p in pairs]
         label = [p[1] for p in pairs]
+        # print(data[3], label[3])
         data = torch.tensor(data)
         label = torch.tensor(label)
         self.idx += self.batch_size
