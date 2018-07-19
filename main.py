@@ -20,7 +20,7 @@ parser.add_argument('--hpc', action='store_true', default=False,
                     help='set to hpc mode')
 parser.add_argument('--data_path', type=str, default='/scratch/zc807/seq_gan/', metavar='PATH',
                     help='data path to save files (default: /scratch/zc807/seq_gan/)')
-parser.add_argument('--rounds', type=int, default=200, metavar='N',
+parser.add_argument('--rounds', type=int, default=150, metavar='N',
                     help='rounds of adversarial training (default: 150)')
 parser.add_argument('--g_pretrain_steps', type=int, default=120, metavar='N',
                     help='steps of pre-training of generators (default: 120)')
@@ -237,10 +237,8 @@ if __name__ == '__main__':
     generator = Generator(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
     discriminator = Discriminator(d_num_class, args.vocab_size, d_embed_dim, d_filter_sizes, d_num_filters, d_dropout_prob)
     target_lstm = TargetLSTM(args.vocab_size, g_embed_dim, g_hidden_dim, args.cuda)
-    nll_loss = nn.CrossEntropyLoss()
+    nll_loss = nn.NLLLoss()
     pg_loss = PGLoss()
-    gen_optimizer = optim.Adam(params=generator.parameters(), lr=args.gen_lr)
-    dis_optimizer = optim.SGD(params=discriminator.parameters(), lr=args.dis_lr)
     if args.cuda:
         generator = generator.cuda()
         discriminator = discriminator.cuda()
@@ -248,6 +246,8 @@ if __name__ == '__main__':
         nll_loss = nll_loss.cuda()
         pg_loss = pg_loss.cuda()
         cudnn.benchmark = True
+    gen_optimizer = optim.Adam(params=generator.parameters(), lr=args.gen_lr)
+    dis_optimizer = optim.SGD(params=discriminator.parameters(), lr=args.dis_lr)
 
     # Container of experiment data
     gen_pretrain_train_loss = []

@@ -91,7 +91,6 @@ class DisDataIter:
         pairs = [self.pairs[i] for i in index]
         data = [p[0] for p in pairs]
         label = [p[1] for p in pairs]
-        # print(data[3], label[3])
         data = torch.tensor(data)
         label = torch.tensor(label)
         self.idx += self.batch_size

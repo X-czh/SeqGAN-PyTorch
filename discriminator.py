@@ -19,7 +19,6 @@ class Discriminator(nn.Module):
         self.highway = nn.Linear(sum(num_filters), sum(num_filters))
         self.dropout = nn.Dropout(p = dropout_prob)
         self.fc = nn.Linear(sum(num_filters), num_classes)
-        self.init_params()
 
     def forward(self, x):
         """
@@ -37,7 +36,3 @@ class Discriminator(nn.Module):
         out = transform * F.relu(highway) + (1. - transform) * out # sets C = 1 - T
         out = F.log_softmax(self.fc(self.dropout(out)), dim=1) # batch * num_classes
         return out
-
-    def init_params(self):
-        for param in self.parameters():
-            param.data.uniform_(-0.05, 0.05)
