@@ -5,7 +5,7 @@ An implementation of SeqGAN (Paper: [SeqGAN: Sequence Generative Adversarial Net
 ```
 $ python main.py
 ```
-Please refer to ```main.py``` for supported arguemnts. You can also change model parameters there.
+Please refer to ```main.py``` for supported arguments. You can also change model parameters there.
 
 ## Dependency
 * PyTorch 0.4.0+
