@@ -123,8 +123,8 @@ def train_generator_PG(gen, dis, rollout, pg_loss, optimizer, epochs, args):
         # calculate the reward
         rewards = torch.tensor(rollout.get_reward(samples, args.n_rollout, dis))
         if args.cuda:
-            rewards = torch.exp(rewards.cuda()).contiguous().view((-1,))
-        
+            rewards = rewards.cuda()
+
         # update generator
         output = gen(inputs)
         loss = pg_loss(output, targets, rewards)
@@ -138,13 +138,14 @@ def eval_generator(model, data_iter, criterion, args):
     Evaluate generator with NLL
     """
     total_loss = 0.
-    for data, target in data_iter:
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
-        target = target.contiguous().view(-1)
-        pred = model(data)
-        loss = criterion(pred, target)
-        total_loss += loss.item()
+    with torch.no_grad():
+        for data, target in data_iter:
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            target = target.contiguous().view(-1)
+            pred = model(data)
+            loss = criterion(pred, target)
+            total_loss += loss.item()
     avg_loss = total_loss / len(data_iter)
     return avg_loss
 
@@ -185,15 +186,16 @@ def eval_discriminator(model, data_iter, criterion, args):
     """
     correct = 0
     total_loss = 0.
-    for data, target in data_iter:
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
-        target = target.contiguous().view(-1)
-        output = model(data)
-        pred = output.data.max(1)[1]
-        correct += pred.eq(target.data).cpu().sum()
-        loss = criterion(output, target)
-        total_loss += loss.item()
+    with torch.no_grad():
+        for data, target in data_iter:
+            if args.cuda:
+                data, target = data.cuda(), target.cuda()
+            target = target.contiguous().view(-1)
+            output = model(data)
+            pred = output.data.max(1)[1]
+            correct += pred.eq(target.data).cpu().sum()
+            loss = criterion(output, target)
+            total_loss += loss.item()
     avg_loss = total_loss / len(data_iter)
     acc = correct.item() / data_iter.data_num
     return avg_loss, acc
