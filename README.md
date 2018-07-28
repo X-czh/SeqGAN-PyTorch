@@ -10,7 +10,7 @@ Please refer to ```main.py``` for supported arguments. You can also change model
 ## Dependency
 * PyTorch 0.4.0+
 * Python 3.5+
-* CUDA 8.0+ (For GPU)
+* CUDA 8.0+ & cuDNN(For GPU)
 * numpy
 
 ## Hacks and Observations
