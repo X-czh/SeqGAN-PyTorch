@@ -48,7 +48,7 @@ class GenDataIter:
             lines = f.readlines()
         lis = []
         for line in lines:
-            l = [int(s) for s in list(line.strip())]
+            l = [int(s) for s in list(line.strip().split())]
             lis.append(l)
         return lis
 
@@ -101,6 +101,6 @@ class DisDataIter:
             lines = f.readlines()
         lis = []
         for line in lines:
-            l = [int(s) for s in list(line.strip())]
+            l = [int(s) for s in list(line.strip().split())]
             lis.append(l) 
         return lis

@@ -80,7 +80,7 @@ def generate_samples(model, batch_size, generated_num, output_file):
         samples.extend(sample)
     with open(output_file, 'w') as fout:
         for sample in samples:
-            string = ''.join([str(s) for s in sample])
+            string = ' '.join([str(s) for s in sample])
             fout.write('{}\n'.format(string))
 
 
