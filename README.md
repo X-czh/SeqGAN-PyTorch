@@ -8,7 +8,7 @@ $ python main.py
 Please refer to ```main.py``` for supported arguments. You can also change model parameters there.
 
 ## Dependency
-* PyTorch 0.4.0+
+* PyTorch 0.4.0+ (1.0 ready)
 * Python 3.5+
 * CUDA 8.0+ & cuDNN (For GPU)
 * numpy
